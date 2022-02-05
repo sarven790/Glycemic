@@ -44,7 +44,7 @@ public class UserService extends SimpleUrlLogoutSuccessHandler implements UserDe
         if ( oUser.isPresent() ) {
             User u = oUser.get();
             userDetails = new org.springframework.security.core.userdetails.User(
-                u.getEmail(),
+                    u.getEmail(),
                     u.getPassword(),
                     u.isEnabled(),
                     u.isTokenExpired(),
@@ -52,6 +52,7 @@ public class UserService extends SimpleUrlLogoutSuccessHandler implements UserDe
                     true,
                     getAuthorities( u.getRoles() )
             );
+            return userDetails;
         }
         throw  new UsernameNotFoundException("User name not found!");
     }
@@ -87,6 +88,53 @@ public class UserService extends SimpleUrlLogoutSuccessHandler implements UserDe
     @Override
     public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         super.onLogoutSuccess(request, response, authentication);
+    }
+
+
+    // User Register Service
+    public User userRegisterService( User user ) {
+
+        // User Control
+        Optional<User> oUser = uRepo.findByEmailEqualsIgnoreCase(user.getEmail());
+        if (oUser.isPresent() ) {
+            return null;
+        }else {
+            // Register Action
+            Optional<Role> oRole = rRepo.findById(2l);
+            if (oRole.isPresent() ) {
+                // Register
+                List<Role> roles = new ArrayList<>();
+                Role r = oRole.get();
+                roles.add(r);
+                user.setRoles(roles);
+                // email send -> enabled false
+                return register(user);
+            }
+        }
+
+        return null;
+    }
+
+
+    // User Register Service
+    public User adminRegisterService( User user ) {
+
+        // User Control
+        Optional<User> oUser = uRepo.findByEmailEqualsIgnoreCase(user.getEmail());
+        if (oUser.isPresent() ) {
+            return null;
+        }else {
+            // Register Action
+            Optional<Role> oRole = rRepo.findById(1l);
+            if (oRole.isPresent() ) {
+                // Register
+                user.setRoles(rRepo.findAll());
+                // email send -> enabled false
+                return register(user);
+            }
+        }
+
+        return null;
     }
 
 
