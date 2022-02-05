@@ -56,4 +56,66 @@ public class FoodsRestController {
         return hm;
     }
 
+    // food delete
+    @DeleteMapping("/userFoodDelete")
+    public Map<REnum,Object> userFoodDelete(@RequestParam("gid") String gid) {
+
+        Map<REnum, Object> hm = new LinkedHashMap<>();
+
+        try {
+
+            Long Ggid = Long.parseLong(gid);
+
+            Foods f = foodService.userFoodDelete(Ggid);
+
+            if (f == null) {
+
+                hm.put(REnum.status, false);
+                hm.put(REnum.message, "Silme işlemi gerçekleştirilemedi");
+
+            } else {
+
+                hm.put(REnum.status, true);
+                hm.put(REnum.message, "Silme işlemi başarılı");
+                hm.put(REnum.result, f);
+
+            }
+
+        } catch (Exception ex) {
+
+            hm.put(REnum.status, false);
+            hm.put(REnum.message, "Silme işlemi sırasında bir hata oluştu");
+
+        }
+
+        return hm;
+
+    }
+
+    // food update
+    @PutMapping("/userFoodUpdate")
+    public Map<REnum,Object> userFoodUpdate(@RequestBody Foods foods){
+
+        Map<REnum, Object> hm = new LinkedHashMap<>();
+
+        Foods f = foodService.userFoodUpdate(foods);
+
+        if ( f == null ) {
+
+            hm.put(REnum.status, false);
+            hm.put(REnum.message, "Güncelleme işlemi gerçekleştirilemedi");
+            hm.put(REnum.result, f);
+
+        }else {
+
+            hm.put(REnum.status, true);
+            hm.put(REnum.message, "Güncelleme işlemi başarılı");
+            hm.put(REnum.result, f);
+
+        }
+
+        return hm;
+
+    }
+
 }

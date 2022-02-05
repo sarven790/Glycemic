@@ -48,4 +48,53 @@ public class FoodService {
 
     }
 
+    //user food delete
+    public Foods userFoodDelete(long gid) {
+
+        Optional<String> oUserName = auditAwareConfig.getCurrentAuditor();
+
+        if (oUserName.isPresent()) {
+
+            Optional<Foods> oFoods = fRepo.findByGidAndCreatedByIgnoreCase(gid, oUserName.get());
+
+            if (oFoods.isPresent()) {
+
+                Foods foods = oFoods.get();
+                fRepo.deleteById(gid);
+
+                return foods;
+            }
+        }
+
+        return null;
+    }
+
+    //user food update
+    public Foods userFoodUpdate(Foods foods){
+
+        Optional<String> oUserName = auditAwareConfig.getCurrentAuditor();
+
+        if(oUserName.isPresent()) {
+            Optional<Foods> oFoods = fRepo.findByGidAndCreatedByIgnoreCase(foods.getGid(),oUserName.get());
+
+            if(oFoods.isPresent()) {
+                Foods f = oFoods.get();
+                f.setCid(foods.getCid());
+                f.setName(foods.getName());
+                f.setGlycemicindex(foods.getGlycemicindex());
+                f.setImage(foods.getImage());
+                f.setSource(foods.getSource());
+
+                fRepo.saveAndFlush(f);
+
+                return f;
+
+            }
+
+        }
+
+        return null;
+
+    }
+
 }
