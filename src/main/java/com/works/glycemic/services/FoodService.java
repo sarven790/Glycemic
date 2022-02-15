@@ -3,20 +3,23 @@ package com.works.glycemic.services;
 import com.works.glycemic.config.AuditAwareConfig;
 import com.works.glycemic.models.Foods;
 import com.works.glycemic.repositories.FoodRepository;
+import com.works.glycemic.utils.REnum;
+import org.apache.commons.text.WordUtils;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class FoodService {
 
     final FoodRepository fRepo;
     final AuditAwareConfig auditAwareConfig;
-    public FoodService(FoodRepository fRepo, AuditAwareConfig auditAwareConfig) {
+    final CacheManager cacheManager;
+    public FoodService(FoodRepository fRepo, AuditAwareConfig auditAwareConfig,CacheManager cacheManager) {
         this.fRepo = fRepo;
         this.auditAwareConfig = auditAwareConfig;
+        this.cacheManager = cacheManager;
     }
 
 
@@ -27,15 +30,23 @@ public class FoodService {
             return null;
         }else {
             foods.setEnabled(false);
+            String after = foods.getName().trim().replaceAll(" +", " ");
+            after = WordUtils.capitalize(after);
+            foods.setName(after);
+            foods.setDetailsUrl(charConvert(foods.getName()));
             return fRepo.save(foods);
         }
     }
 
     // food list
     public List<Foods> foodsList() {
-        return fRepo.findAll();
+        return fRepo.findByEnabledEqualsOrderByGidDesc(true);
     }
 
+    // admin Wait food list
+    public List<Foods> adminWaitFoodList() {
+        return fRepo.findByEnabledEqualsOrderByGidDesc(false);
+    }
 
     // user food list
     public List<Foods> userFoodList() {
@@ -49,52 +60,121 @@ public class FoodService {
     }
 
     //user food delete
-    public Foods userFoodDelete(long gid) {
+    public String userFoodDelete(long gid) {
 
-        Optional<String> oUserName = auditAwareConfig.getCurrentAuditor();
+        if(fRepo.findById(gid).isPresent()) {
 
-        if (oUserName.isPresent()) {
+            Optional<String> oUserName = auditAwareConfig.getCurrentAuditor();
 
-            Optional<Foods> oFoods = fRepo.findByGidAndCreatedByIgnoreCase(gid, oUserName.get());
+            if (oUserName.isPresent()) {
 
-            if (oFoods.isPresent()) {
+                if (auditAwareConfig.roles().contains("ROLE_admin")) {
 
-                Foods foods = oFoods.get();
-                fRepo.deleteById(gid);
+                    fRepo.deleteById(gid);
+                    return "Silme işlemi başarılı";
 
-                return foods;
+                } else {
+
+                    Optional<Foods> oFoods = fRepo.findByGidAndCreatedByIgnoreCase(gid, oUserName.get());
+
+                    if (oFoods.isPresent()) {
+
+                        //Foods foods = oFoods.get();
+                        fRepo.deleteById(gid);
+
+                        return "Silme işlemi başarılı";
+                    } else {
+                        return "Bu ürün size ait değil";
+                    }
+                }
+            } else {
+                return "Bu işlem için yetkiniz yok!";
             }
+
+        }else{
+            return "Aradığınız ürün bulunamamıştır";
         }
 
-        return null;
     }
 
     //user food update
-    public Foods userFoodUpdate(Foods foods){
+    public Map<REnum, Object> userUpdateFood(Foods food) {
+        Map<REnum, Object> hm = new LinkedHashMap<>();
+
+        hm.put(REnum.status, true);
+        hm.put(REnum.message, "Ürün başarıyla güncellendi");
+        hm.put(REnum.result, "id: " + food.getGid());
 
         Optional<String> oUserName = auditAwareConfig.getCurrentAuditor();
-
-        if(oUserName.isPresent()) {
-            Optional<Foods> oFoods = fRepo.findByGidAndCreatedByIgnoreCase(foods.getGid(),oUserName.get());
-
-            if(oFoods.isPresent()) {
-                Foods f = oFoods.get();
-                f.setCid(foods.getCid());
-                f.setName(foods.getName());
-                f.setGlycemicindex(foods.getGlycemicindex());
-                f.setImage(foods.getImage());
-                f.setSource(foods.getSource());
-
-                fRepo.saveAndFlush(f);
-
-                return f;
-
+        if (oUserName.isPresent()) {
+            String userName = oUserName.get();
+            try {
+                Foods userFood = fRepo.findById(food.getGid()).get();
+                //admin food update
+                if (auditAwareConfig.roles().contains("ROLE_admin")) {
+                    userFood.setCid(food.getCid());
+                    String afterName = food.getName().trim().replaceAll(" +", " ");
+                    afterName = WordUtils.capitalize(afterName);
+                    userFood.setName(afterName);
+                    userFood.setGlycemicindex(food.getGlycemicindex());
+                    userFood.setImage(food.getImage());
+                    userFood.setDetailsUrl(charConvert(userFood.getName()));
+                    userFood.setSource(food.getSource());
+                    userFood.setEnabled(food.isEnabled());
+                    if ( food.isEnabled() ) {
+                        cacheManager.getCache("foods_list").clear();
+                    }
+                    hm.put(REnum.result, fRepo.save(userFood));
+                }
+                else {
+                    //user food update
+                    Optional<Foods> oFood = fRepo.findByGidAndCreatedByIgnoreCase(food.getGid(),userName);
+                    if (oFood.isPresent()) {
+                        userFood.setCid(food.getCid());
+                        String afterName = food.getName().trim().replaceAll(" +", " ");
+                        afterName = WordUtils.capitalize(afterName);
+                        userFood.setName(afterName);
+                        userFood.setGlycemicindex(food.getGlycemicindex());
+                        userFood.setImage(food.getImage());
+                        userFood.setDetailsUrl(charConvert(food.getName()));
+                        userFood.setSource(food.getSource());
+                        hm.put(REnum.result, fRepo.save(userFood));
+                    }
+                    else {
+                        hm.put(REnum.status, false);
+                        hm.put(REnum.message, "Güncellemek istediğiniz ürün size ait değil!");
+                    }
+                }
             }
-
+            catch (Exception ex) {
+                hm.put(REnum.status, false);
+                hm.put(REnum.message, "Update işlemi sırasında bir hata oluştu!");
+            }
+        } else {
+            hm.put(REnum.status, false);
+            hm.put(REnum.message, "Bu işleme yetkiniz yok!");
         }
-
-        return null;
-
+        return hm;
     }
+
+    public static String charConvert(String word)
+    {
+        word = word.trim();
+        String convertWord = word.toLowerCase();
+        char[] oldValue = new char[] { 'ö', 'ü', 'ç', 'ı', 'ğ', 'ş' };
+        char[] newValue = new char[] { 'o', 'u', 'c', 'i', 'g', 's' };
+        for (int count = 0; count < oldValue.length; count++)
+        {
+            convertWord = convertWord.replace(oldValue[count], newValue[count]);
+            convertWord = convertWord.replaceFirst(" ", "-");
+            convertWord = convertWord.replace(" ","");
+        }
+        return convertWord;
+    }
+
+    public Optional<Foods> singleFoodUrl(String url) {
+        return fRepo.findBydetailsUrlEqualsIgnoreCaseAllIgnoreCase(url);
+    }
+
 
 }

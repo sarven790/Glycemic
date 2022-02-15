@@ -3,11 +3,14 @@ package com.works.glycemic.restcontrollers;
 import com.works.glycemic.models.Foods;
 import com.works.glycemic.services.FoodService;
 import com.works.glycemic.utils.REnum;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
 @RequestMapping("/foods")
 public class FoodsRestController {
@@ -36,6 +39,7 @@ public class FoodsRestController {
 
 
     // foods List
+    @Cacheable("foods_list")
     @GetMapping("/list")
     public Map<REnum, Object> list() {
         Map<REnum, Object> hm = new LinkedHashMap<>();
@@ -56,8 +60,18 @@ public class FoodsRestController {
         return hm;
     }
 
+    // foods List
+    @GetMapping("/adminWaitFoodList")
+    public Map<REnum, Object> adminWaitFoodList() {
+        Map<REnum, Object> hm = new LinkedHashMap<>();
+        hm.put(REnum.status, true);
+        hm.put(REnum.message, "Ürün Listesi");
+        hm.put(REnum.result, foodService.adminWaitFoodList());
+        return hm;
+    }
+
     // food delete
-    @DeleteMapping("/userFoodDelete")
+    @DeleteMapping("/foodDelete")
     public Map<REnum,Object> userFoodDelete(@RequestParam("gid") String gid) {
 
         Map<REnum, Object> hm = new LinkedHashMap<>();
@@ -66,18 +80,17 @@ public class FoodsRestController {
 
             Long Ggid = Long.parseLong(gid);
 
-            Foods f = foodService.userFoodDelete(Ggid);
+            String f = foodService.userFoodDelete(Ggid);
 
-            if (f == null) {
+            if (!f.equals("Silme işlemi başarılı")) {
 
                 hm.put(REnum.status, false);
-                hm.put(REnum.message, "Silme işlemi gerçekleştirilemedi");
+                hm.put(REnum.message, f);
 
             } else {
 
                 hm.put(REnum.status, true);
-                hm.put(REnum.message, "Silme işlemi başarılı");
-                hm.put(REnum.result, f);
+                hm.put(REnum.message, f);
 
             }
 
@@ -93,29 +106,28 @@ public class FoodsRestController {
     }
 
     // food update
-    @PutMapping("/userFoodUpdate")
-    public Map<REnum,Object> userFoodUpdate(@RequestBody Foods foods){
-
-        Map<REnum, Object> hm = new LinkedHashMap<>();
-
-        Foods f = foodService.userFoodUpdate(foods);
-
-        if ( f == null ) {
-
-            hm.put(REnum.status, false);
-            hm.put(REnum.message, "Güncelleme işlemi gerçekleştirilemedi");
-            hm.put(REnum.result, f);
-
-        }else {
-
-            hm.put(REnum.status, true);
-            hm.put(REnum.message, "Güncelleme işlemi başarılı");
-            hm.put(REnum.result, f);
-
-        }
-
-        return hm;
-
+    @PutMapping("foodUpdate")
+    public Map<REnum,Object> foodUpdate(@RequestBody Foods food){
+        return foodService.userUpdateFood(food);
     }
+
+
+    @GetMapping("detail/{url}")
+    public Map<REnum, Object> singleFoodUrl(@PathVariable String url){
+        Map<REnum, Object> hm = new LinkedHashMap<>();
+        Optional<Foods> oFoods = foodService.singleFoodUrl(url);
+        if (oFoods.isPresent() ) {
+            hm.put(REnum.status, true);
+            hm.put(REnum.message, "Ürün detay alındı");
+            hm.put(REnum.result, oFoods.get());
+        }else {
+            hm.put(REnum.status, false);
+            hm.put(REnum.message, "Ürün detay bulunamadı");
+            hm.put(REnum.result, null);
+        }
+        return hm;
+    }
+
+
 
 }

@@ -21,6 +21,7 @@ public class Foods extends BaseModel {
     private Integer glycemicindex;
     @Column(length = 10000)
     private String image;
+    private String detailsUrl;
     private String source;
     private boolean enabled;
 
