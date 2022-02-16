@@ -14,7 +14,7 @@ I took part in the project called Glycemic, which was started so that diabetics 
 | ------------------ |
 |   Spring Boot      |
 |   Spring Security  |
-|   Hibernate        |
+|   Hibernate / JPA  |
 |   H2 Database      |
 |   React JS         |
 
