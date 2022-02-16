@@ -23,8 +23,10 @@ I took part in the project called Glycemic, which was started so that diabetics 
 
 ![](https://github.com/sarven790/Glycemic/blob/master/Images/image1.jpg)
 ![](https://github.com/sarven790/Glycemic/blob/master/Images/image2.jpg)
-![](https://github.com/sarven790/Glycemic/blob/master/Images/image3jpg)
-![](https://github.com/sarven790/Glycemic/blob/master/Images/image4jpg)
+![](https://github.com/sarven790/Glycemic/blob/master/Images/image3.jpg)
+![](https://github.com/sarven790/Glycemic/blob/master/Images/image4.jpg)
+![](https://github.com/sarven790/Glycemic/blob/master/Images/image5.jpg)
+
 
 ### Libraries to Install
 The following libraries must be installed before starting React. Otherwise, you cannot run the program properly.
